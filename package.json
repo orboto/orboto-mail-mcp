@@ -1,0 +1,38 @@
+{
+  "name": "@orboto/mail-mcp",
+  "version": "0.1.0-placeholder",
+  "description": "MCP server for the Orboto Mail Service — exposes oms_send_email / oms_send_template / oms_get_quota / oms_check_suppression as Claude Code MCP tools. Placeholder; full implementation lands in OMS-11.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "orboto-mail-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orboto/mail": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
