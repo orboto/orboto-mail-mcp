@@ -20,7 +20,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@orboto/mail": "workspace:*"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@orboto/mail": "workspace:*",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

@@ -1,10 +1,14 @@
 /**
- * @orboto/mail-mcp — MCP server for the Orboto Mail Service.
+ * @orboto/mail-mcp — MCP server for the Orboto Mail Service (OMS-11).
  *
- * Placeholder. Full implementation lands in OMS-11. When that ticket
- * ships, this entry point will export an MCP-protocol server that
- * surfaces the following tools to Claude Code agents:
+ * Exposes seven tools to AI agents (Claude Code, Cursor, MCP-aware
+ * bots). The agent calls a tool; this server proxies it to the OMS
+ * REST API at `OMS_BASE_URL` (default https://mail.orboto.io/api)
+ * using `OMS_API_KEY` as the Bearer token. Every tool response
+ * includes `remainingQuota` so the agent can decide whether to retry,
+ * back off, or escalate to the human.
  *
+ * Tools registered:
  *   - oms_send_email
  *   - oms_send_template
  *   - oms_get_quota
@@ -13,13 +17,246 @@
  *   - oms_add_to_suppression
  *   - oms_list_templates
  *
- * Auth: same Bearer-token as the REST API + SDK. The MCP server reads
- * `OMS_API_KEY` from env (or accepts `--api-key`). All tool responses
- * include `remainingQuota` so the agent can decide whether to retry or
- * back off.
- *
- * See `evaluation/adr-orboto-mail-service.md` §AI-Agent integration
- * for the full contract.
+ * Boot via `bin: orboto-mail-mcp` (cli.ts).
  */
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 
-export const PLACEHOLDER = true;
+export interface CreateServerOptions {
+  /** OMS API base URL — default `https://mail.orboto.io/api`. */
+  baseUrl?: string;
+  /** Bearer-token (`oms_live_…` or `oms_test_…`). Required. */
+  apiKey: string;
+  /** Test injection — substitute global fetch for unit tests. */
+  fetchImpl?: typeof fetch;
+}
+
+interface HttpJsonResult {
+  ok: boolean;
+  status: number;
+  body: unknown;
+}
+
+/**
+ * Build the MCP server. Exposed as a function (not module-level state)
+ * so the caller (cli.ts or tests) controls when the server actually
+ * starts listening + which transport it uses.
+ */
+export function createServer(opts: CreateServerOptions): McpServer {
+  const baseUrl = (opts.baseUrl ?? 'https://mail.orboto.io/api').replace(/\/$/, '');
+  const apiKey = opts.apiKey;
+  const fetchImpl = opts.fetchImpl ?? fetch;
+
+  if (!apiKey) {
+    throw new Error(
+      '@orboto/mail-mcp: apiKey is required. Set OMS_API_KEY in your environment or pass it to createServer().',
+    );
+  }
+
+  async function omsFetch(
+    method: string,
+    path: string,
+    body?: Record<string, unknown>,
+  ): Promise<HttpJsonResult> {
+    const url = `${baseUrl}${path.startsWith('/') ? path : '/' + path}`;
+    const headers: Record<string, string> = {
+      authorization: `Bearer ${apiKey}`,
+      accept: 'application/json',
+    };
+    const init: RequestInit = { method, headers };
+    if (body !== undefined) {
+      headers['content-type'] = 'application/json';
+      init.body = JSON.stringify(body);
+    }
+    const res = await fetchImpl(url, init);
+    const text = await res.text();
+    let parsed: unknown = null;
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = text;
+      }
+    }
+    return { ok: res.ok, status: res.status, body: parsed };
+  }
+
+  /**
+   * Format an OMS response as an MCP `CallToolResult`. Errors are
+   * marked with `isError: true` so the agent surfaces them — and the
+   * raw body (including `remainingQuota` on 402, `reason` codes, etc.)
+   * is rendered as JSON in the text content for the agent to parse.
+   */
+  function asResult(r: HttpJsonResult) {
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(r.body, null, 2),
+        },
+      ],
+      isError: !r.ok,
+    };
+  }
+
+  const server = new McpServer({
+    name: '@orboto/mail-mcp',
+    version: '0.2.0',
+  });
+
+  // ── oms_send_email ──────────────────────────────────────────────
+  server.tool(
+    'oms_send_email',
+    'Send a transactional email through OMS. Use this for one-off mails ' +
+      'where the agent supplies the full subject + body. For templated ' +
+      'sends, use `oms_send_template` instead. Returns the messageId, ' +
+      'queued status, overage flag, and remainingQuota — read remainingQuota ' +
+      'to decide whether the next send needs user confirmation.',
+    {
+      from: z.string().email().describe('Sender address (must be on an authorized domain).'),
+      to: z.string().email().describe('Recipient address.'),
+      subject: z.string().min(1).describe('Subject line.'),
+      body_html: z
+        .string()
+        .optional()
+        .describe('HTML body. At least one of body_html or body_text is required.'),
+      body_text: z.string().optional().describe('Plain-text body.'),
+      tags: z
+        .record(z.string())
+        .optional()
+        .describe('Tag bag, e.g. { workflow: "invite", tenant_id: "acme" }.'),
+    },
+    async (args) => {
+      const r = await omsFetch('POST', '/v1/send', {
+        from: args.from,
+        to: args.to,
+        subject: args.subject,
+        html: args.body_html,
+        text: args.body_text,
+        tags: args.tags,
+      });
+      return asResult(r);
+    },
+  );
+
+  // ── oms_send_template ───────────────────────────────────────────
+  server.tool(
+    'oms_send_template',
+    'Render a server-side template and send the rendered mail through ' +
+      'OMS. Variables are validated against the template\'s stored schema ' +
+      'before render; mismatches return a 400 template_variable_validation. ' +
+      'Use this when the customer has a defined template (welcome, password-reset, etc.); ' +
+      'use oms_list_templates to discover available template IDs.',
+    {
+      template_id: z.string().uuid().describe('The template UUID from oms_list_templates.'),
+      from: z.string().email().describe('Sender address (must be authorized).'),
+      to: z.string().email().describe('Recipient address.'),
+      variables: z
+        .record(z.unknown())
+        .optional()
+        .describe('Variables for the template body. Must match the template variables_schema.'),
+      subject: z
+        .string()
+        .optional()
+        .describe('Optional subject override. Defaults to the template subject.'),
+      tags: z.record(z.string()).optional(),
+    },
+    async (args) => {
+      const r = await omsFetch('POST', '/v1/send', {
+        from: args.from,
+        to: args.to,
+        subject: args.subject,
+        templateId: args.template_id,
+        variables: args.variables ?? {},
+        tags: args.tags,
+      });
+      return asResult(r);
+    },
+  );
+
+  // ── oms_get_quota ───────────────────────────────────────────────
+  server.tool(
+    'oms_get_quota',
+    'Read the current month\'s quota snapshot. Returns current/total/' +
+      'percentUsed/softWarnTriggered + capReason. Use before composing a ' +
+      'bulk-send to decide whether to ask the user for confirmation.',
+    {},
+    async () => {
+      const r = await omsFetch('GET', '/v1/quota');
+      return asResult(r);
+    },
+  );
+
+  // ── oms_list_recent_sends ───────────────────────────────────────
+  server.tool(
+    'oms_list_recent_sends',
+    'List the customer\'s recent sends, most-recent first. Useful for ' +
+      'answering questions like "did the welcome mail go out?" or for ' +
+      'detecting a stuck flow before retrying.',
+    {
+      limit: z.number().int().min(1).max(100).optional().describe('Default 20.'),
+    },
+    async (args) => {
+      const limit = args.limit ?? 20;
+      const r = await omsFetch('GET', `/v1/sends?limit=${limit}`);
+      return asResult(r);
+    },
+  );
+
+  // ── oms_check_suppression ───────────────────────────────────────
+  server.tool(
+    'oms_check_suppression',
+    'Check whether a recipient is on the customer\'s suppression list. ' +
+      'Always check before sending to a freshly-typed-by-the-user address — ' +
+      'OMS would 422 the send otherwise + you save the round-trip.',
+    {
+      email: z.string().email(),
+    },
+    async (args) => {
+      const r = await omsFetch('GET', `/v1/suppression/${encodeURIComponent(args.email)}`);
+      return asResult(r);
+    },
+  );
+
+  // ── oms_add_to_suppression ──────────────────────────────────────
+  server.tool(
+    'oms_add_to_suppression',
+    'Manually add an address to the customer\'s suppression list. ' +
+      'Default reason is `manual`; use `hard-bounce` or `complaint` only ' +
+      'with explicit user direction (those reasons are normally set by the ' +
+      'SES-event handler on actual bounces/complaints).',
+    {
+      email: z.string().email(),
+      reason: z.enum(['manual', 'hard-bounce', 'complaint']).optional(),
+    },
+    async (args) => {
+      const r = await omsFetch('POST', '/v1/suppression', {
+        email: args.email,
+        reason: args.reason ?? 'manual',
+      });
+      return asResult(r);
+    },
+  );
+
+  // ── oms_list_templates ──────────────────────────────────────────
+  server.tool(
+    'oms_list_templates',
+    'List the customer\'s server-side templates with their variable ' +
+      'schemas. Returns id + name + subject + variablesSchema for each. ' +
+      'Use this to discover template_ids before calling oms_send_template.',
+    {},
+    async () => {
+      const r = await omsFetch('GET', '/v1/templates');
+      return asResult(r);
+    },
+  );
+
+  return server;
+}
+
+/**
+ * Marker preserved for back-compat with the placeholder smoke test
+ * shipped in OMS-1. New tests should reach for `createServer()` and
+ * test tool behavior directly; the marker is harmless re-export.
+ */
+export const PLACEHOLDER = true as const;
