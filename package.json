@@ -34,6 +34,22 @@
   "engines": {
     "node": ">=22"
   },
+  "keywords": [
+    "orboto",
+    "mcp",
+    "model-context-protocol",
+    "email",
+    "transactional-email",
+    "claude",
+    "agents",
+    "ai",
+    "eu-hosted",
+    "gdpr"
+  ],
+  "homepage": "https://mail.orboto.io",
+  "bugs": {
+    "email": "support@orboto.io"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
