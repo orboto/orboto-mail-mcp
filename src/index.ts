@@ -312,6 +312,39 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_list_inbound ────────────────────────────────────────────
+  server.tool(
+    'oms_list_inbound',
+    'List inbound mails received by this customer (OMS-25). Most-recent ' +
+      'first, cursor-paginated. Each row carries id, messageId, from, to, ' +
+      'subject + receivedAt. Body is NOT returned here — call oms_get_inbound ' +
+      'with the id to obtain a 15-min presigned-URL for the raw MIME body.',
+    {
+      limit: z.number().int().min(1).max(100).optional(),
+      cursor: z.string().optional(),
+    },
+    async (args) => {
+      const params = new URLSearchParams();
+      params.set('limit', String(args.limit ?? 20));
+      if (args.cursor) params.set('cursor', args.cursor);
+      const r = await omsFetch('GET', `/v1/inbound?${params.toString()}`);
+      return asResult(r);
+    },
+  );
+
+  // ── oms_get_inbound ─────────────────────────────────────────────
+  server.tool(
+    'oms_get_inbound',
+    'Retrieve a single inbound mail with a 15-min presigned-URL for ' +
+      'the raw MIME body (OMS-25). Use the URL directly with a plain ' +
+      'HTTP GET (no Bearer needed) to fetch the body bytes.',
+    { id: z.string().uuid() },
+    async (args) => {
+      const r = await omsFetch('GET', `/v1/inbound/${encodeURIComponent(args.id)}`);
+      return asResult(r);
+    },
+  );
+
   // ── oms_list_webhooks ───────────────────────────────────────────
   server.tool(
     'oms_list_webhooks',
