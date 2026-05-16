@@ -190,15 +190,30 @@ export function createServer(opts: CreateServerOptions): McpServer {
   // ── oms_list_recent_sends ───────────────────────────────────────
   server.tool(
     'oms_list_recent_sends',
-    'List the customer\'s recent sends, most-recent first. Useful for ' +
-      'answering questions like "did the welcome mail go out?" or for ' +
-      'detecting a stuck flow before retrying.',
+    'List the customer\'s recent sends, most-recent first. Cursor-' +
+      'paginated; pass the previous response\'s `nextCursor` as `cursor` ' +
+      'to advance. Optional filters: status, region. Useful for answering ' +
+      '"did the welcome mail go out?" or for detecting a stuck flow before ' +
+      'retrying.',
     {
-      limit: z.number().int().min(1).max(100).optional().describe('Default 20.'),
+      limit: z.number().int().min(1).max(100).optional().describe('Default 20, max 100.'),
+      cursor: z
+        .string()
+        .optional()
+        .describe('Opaque cursor from a previous response\'s `nextCursor`.'),
+      status: z
+        .enum(['queued', 'delivered', 'bounced', 'complained', 'rejected'])
+        .optional()
+        .describe('Filter by send status.'),
+      region: z.enum(['eu-central-1', 'eu-west-1']).optional(),
     },
     async (args) => {
-      const limit = args.limit ?? 20;
-      const r = await omsFetch('GET', `/v1/sends?limit=${limit}`);
+      const params = new URLSearchParams();
+      params.set('limit', String(args.limit ?? 20));
+      if (args.cursor) params.set('cursor', args.cursor);
+      if (args.status) params.set('status', args.status);
+      if (args.region) params.set('region', args.region);
+      const r = await omsFetch('GET', `/v1/sends?${params.toString()}`);
       return asResult(r);
     },
   );
