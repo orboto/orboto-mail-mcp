@@ -178,8 +178,13 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_get_quota',
     'Read the current month\'s quota snapshot. Returns current/total/' +
-      'percentUsed/softWarnTriggered + capReason. Use before composing a ' +
-      'bulk-send to decide whether to ask the user for confirmation.',
+      'percentUsed/softWarnTriggered + capReason for monthly limits, ' +
+      'plus dailyCap/dailyCurrent/dailyRemaining/dayResetAt for the ' +
+      'per-day cap (Free tier only; null on paid tiers). Use before ' +
+      'composing a bulk-send to decide whether to ask the user for ' +
+      'confirmation. If dailyRemaining is 0, the next send returns 402 ' +
+      'with reason `quota_exhausted_daily` — wait until dayResetAt or ' +
+      'upgrade.',
     {},
     async () => {
       const r = await omsFetch('GET', '/v1/quota');
