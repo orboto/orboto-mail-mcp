@@ -139,6 +139,47 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_send_batch ──────────────────────────────────────────────
+  server.tool(
+    'oms_send_batch',
+    'Send up to 100 transactional emails in one call (OMS-24). Use ' +
+      'this when you need to fan out a flow (e.g. welcome-mail to a ' +
+      'list of 50 freshly imported users) — avoids N×rate-limit hits + ' +
+      'returns one consolidated quota snapshot. Each message is ' +
+      'validated + delivered independently; partial failures surface in ' +
+      'the `results` array with per-item `ok` flag. The first quota-' +
+      'exhaust stops subsequent items (marked `quotaSkipped=true`). ' +
+      'Always returns 200; inspect `summary` + `results` to decide retry.',
+    {
+      messages: z
+        .array(
+          z.object({
+            from: z.string().email(),
+            to: z.string().email(),
+            subject: z.string().min(1).optional(),
+            body_html: z.string().optional(),
+            body_text: z.string().optional(),
+            tags: z.record(z.string()).optional(),
+          }),
+        )
+        .min(1)
+        .max(100),
+    },
+    async (args) => {
+      const r = await omsFetch('POST', '/v1/send/batch', {
+        messages: args.messages.map((m) => ({
+          from: m.from,
+          to: m.to,
+          subject: m.subject,
+          html: m.body_html,
+          text: m.body_text,
+          tags: m.tags,
+        })),
+      });
+      return asResult(r);
+    },
+  );
+
   // ── oms_send_template ───────────────────────────────────────────
   server.tool(
     'oms_send_template',
