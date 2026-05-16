@@ -312,6 +312,61 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_cloudflare_detect ───────────────────────────────────────
+  server.tool(
+    'oms_cloudflare_detect',
+    'Check whether a sender-domain is hosted on Cloudflare DNS. ' +
+      'Returns { onCloudflare, nameservers, resolvedFor }. Use this ' +
+      'before suggesting oms_cloudflare_auto_setup — only call the ' +
+      'auto-setup tool when onCloudflare=true.',
+    {
+      domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
+    },
+    async (args) => {
+      const r = await omsFetch(
+        'GET',
+        `/v1/sender-domains/${encodeURIComponent(args.domain_id)}/cloudflare-detect`,
+      );
+      return asResult(r);
+    },
+  );
+
+  // ── oms_cloudflare_auto_setup ───────────────────────────────────
+  server.tool(
+    'oms_cloudflare_auto_setup',
+    'Auto-create the DKIM/SPF/DMARC DNS records on Cloudflare using a ' +
+      'customer-supplied API token. The customer must have generated a ' +
+      'Cloudflare API token with Zone:DNS:Edit permission on their zone ' +
+      'and pasted it here. The token is single-use by default (validated, ' +
+      'used to create records, then discarded). Pass store_for_rotation=true ' +
+      'only when the customer explicitly wants OMS to retain the token for ' +
+      'future DKIM-key rotations — it gets AES-256-GCM-encrypted at rest. ' +
+      'Returns { ok, zoneId, recordsCreated, tokenStored }.',
+    {
+      domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
+      api_token: z
+        .string()
+        .min(20)
+        .max(200)
+        .describe('Cloudflare API token with Zone:DNS:Edit permission.'),
+      store_for_rotation: z
+        .boolean()
+        .optional()
+        .describe('Default false. True = encrypted retention for future DKIM rotation.'),
+    },
+    async (args) => {
+      const r = await omsFetch(
+        'POST',
+        `/v1/sender-domains/${encodeURIComponent(args.domain_id)}/cloudflare-auto-setup`,
+        {
+          apiToken: args.api_token,
+          storeForRotation: args.store_for_rotation,
+        },
+      );
+      return asResult(r);
+    },
+  );
+
   // ── oms_list_inbound ────────────────────────────────────────────
   server.tool(
     'oms_list_inbound',
