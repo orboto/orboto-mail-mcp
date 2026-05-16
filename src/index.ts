@@ -266,6 +266,66 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_list_webhooks ───────────────────────────────────────────
+  server.tool(
+    'oms_list_webhooks',
+    'List the customer\'s outbound-event webhook subscriptions. Each ' +
+      'row returns url, label, event_filters, enabled flag, last-success/' +
+      'failure timestamps. Signing secrets are stripped on list responses.',
+    {},
+    async () => {
+      const r = await omsFetch('GET', '/v1/webhooks');
+      return asResult(r);
+    },
+  );
+
+  // ── oms_create_webhook ──────────────────────────────────────────
+  server.tool(
+    'oms_create_webhook',
+    'Create a new outbound webhook subscription. The response includes ' +
+      'a plaintext signing secret — surface it to the user EXACTLY ONCE ' +
+      'so they can persist it. Subsequent GETs strip the secret.',
+    {
+      url: z.string().url().describe('Target https:// URL (or http://localhost in dev).'),
+      label: z.string().max(128).optional(),
+      event_filters: z
+        .array(
+          z.enum([
+            'quota.soft-warn-80',
+            'quota.soft-warn-95',
+            'quota.exhausted-base',
+            'quota.exhausted-cap',
+            'bounce.permanent',
+            'bounce.transient',
+            'complaint',
+            'delivery',
+          ]),
+        )
+        .optional()
+        .describe('Empty / omitted = subscribe to all events.'),
+    },
+    async (args) => {
+      const r = await omsFetch('POST', '/v1/webhooks', {
+        url: args.url,
+        label: args.label,
+        eventFilters: args.event_filters,
+      });
+      return asResult(r);
+    },
+  );
+
+  // ── oms_delete_webhook ──────────────────────────────────────────
+  server.tool(
+    'oms_delete_webhook',
+    'Remove a webhook subscription by id. Use oms_list_webhooks first ' +
+      'to discover the id.',
+    { id: z.string().uuid() },
+    async (args) => {
+      const r = await omsFetch('DELETE', `/v1/webhooks/${encodeURIComponent(args.id)}`);
+      return asResult(r);
+    },
+  );
+
   return server;
 }
 
