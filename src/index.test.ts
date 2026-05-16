@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { createServer, PLACEHOLDER } from './index.js';
+import { createServer } from './index.js';
 
 interface FakeFetchCall {
   url: string;
@@ -204,8 +204,3 @@ describe('createServer registers the 7 OMS tools', () => {
   });
 });
 
-describe('@orboto/mail-mcp placeholder marker', () => {
-  it('PLACEHOLDER still exported for back-compat smoke test', () => {
-    expect(PLACEHOLDER).toBe(true);
-  });
-});

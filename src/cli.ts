@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CLI entry-point for `@orboto/mail-mcp` (OMS-11).
+ * CLI entry-point for `@orboto/mail-mcp`.
  *
  * Boots the MCP server over stdio so an MCP client (Claude Code,
  * Cursor, etc.) can spawn it as a child process and communicate via

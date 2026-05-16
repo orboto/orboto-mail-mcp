@@ -1,5 +1,5 @@
 /**
- * @orboto/mail-mcp — MCP server for the Orboto Mail Service (OMS-11).
+ * @orboto/mail-mcp — MCP server for the Orboto Mail Service.
  *
  * Exposes seven tools to AI agents (Claude Code, Cursor, MCP-aware
  * bots). The agent calls a tool; this server proxies it to the OMS
@@ -124,7 +124,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
       tags: z
         .record(z.string())
         .optional()
-        .describe('Tag bag, e.g. { workflow: "invite", tenant_id: "acme" }.'),
+        .describe('Tag bag, e.g. { workflow: "invite", segment: "beta" }.'),
     },
     async (args) => {
       const r = await omsFetch('POST', '/v1/send', {
@@ -142,7 +142,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   // ── oms_send_batch ──────────────────────────────────────────────
   server.tool(
     'oms_send_batch',
-    'Send up to 100 transactional emails in one call (OMS-24). Use ' +
+    'Send up to 100 transactional emails in one call. Use ' +
       'this when you need to fan out a flow (e.g. welcome-mail to a ' +
       'list of 50 freshly imported users) — avoids N×rate-limit hits + ' +
       'returns one consolidated quota snapshot. Each message is ' +
@@ -315,7 +315,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   // ── oms_list_inbound ────────────────────────────────────────────
   server.tool(
     'oms_list_inbound',
-    'List inbound mails received by this customer (OMS-25). Most-recent ' +
+    'List inbound mails received by this customer. Most-recent ' +
       'first, cursor-paginated. Each row carries id, messageId, from, to, ' +
       'subject + receivedAt. Body is NOT returned here — call oms_get_inbound ' +
       'with the id to obtain a 15-min presigned-URL for the raw MIME body.',
@@ -336,7 +336,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_get_inbound',
     'Retrieve a single inbound mail with a 15-min presigned-URL for ' +
-      'the raw MIME body (OMS-25). Use the URL directly with a plain ' +
+      'the raw MIME body. Use the URL directly with a plain ' +
       'HTTP GET (no Bearer needed) to fetch the body bytes.',
     { id: z.string().uuid() },
     async (args) => {
@@ -407,10 +407,3 @@ export function createServer(opts: CreateServerOptions): McpServer {
 
   return server;
 }
-
-/**
- * Marker preserved for back-compat with the placeholder smoke test
- * shipped in OMS-1. New tests should reach for `createServer()` and
- * test tool behavior directly; the marker is harmless re-export.
- */
-export const PLACEHOLDER = true as const;

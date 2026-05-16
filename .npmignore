@@ -1,0 +1,7 @@
+# TypeScript incremental-compilation artefact — not user-facing.
+dist/.tsbuildinfo
+
+# Source + tests.
+*.test.ts
+*.test.js
+src/
