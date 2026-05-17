@@ -219,13 +219,18 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_get_quota',
     'Read the current month\'s quota snapshot. Returns current/total/' +
-      'percentUsed/softWarnTriggered + capReason for monthly limits, ' +
-      'plus dailyCap/dailyCurrent/dailyRemaining/dayResetAt for the ' +
-      'per-day cap (Free tier only; null on paid tiers). Use before ' +
-      'composing a bulk-send to decide whether to ask the user for ' +
-      'confirmation. If dailyRemaining is 0, the next send returns 402 ' +
-      'with reason `quota_exhausted_daily` — wait until dayResetAt or ' +
-      'upgrade.',
+      'percentUsed/softWarnTriggered + capReason for the subscription ' +
+      'limit, plus dailyCap/dailyCurrent/dailyRemaining/dayResetAt for ' +
+      'the Free-tier per-day cap (null on paid tiers), plus overageMode/' +
+      'creditBalance/monthlyOverageCapEurCents/overageUsedThisMonth' +
+      'Microcents for the new overage model. Capacity rules:\\n' +
+      '- current < total → send freely\\n' +
+      '- current ≥ total + overageMode=hard_gate → 402 hard_gate (top up credits or change overage mode)\\n' +
+      '- current ≥ total + overageMode=use_credits + creditBalance > 0 + cap not reached → send consumes 1 credit + €0.0005 toward the monthly cap\\n' +
+      '- creditBalance=0 → 402 no_credits\\n' +
+      '- accruing would exceed monthlyOverageCapEurCents → 402 monthly_cap_reached\\n' +
+      'Use this before composing a bulk-send to decide whether to ask ' +
+      'the user for confirmation or top-up.',
     {},
     async () => {
       const r = await omsFetch('GET', '/v1/quota');
