@@ -317,6 +317,63 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_list_api_keys ───────────────────────────────────────────
+  server.tool(
+    'oms_list_api_keys',
+    'List the customer\'s API keys (OMS-31). Returns id + name + ' +
+      'display-prefix + lastUsedAt + revokedAt per row. NEVER includes ' +
+      'plaintext — those are visible only at create / rotate time, once.',
+    {},
+    async () => {
+      const r = await omsFetch('GET', '/v1/api-keys');
+      return asResult(r);
+    },
+  );
+
+  // ── oms_create_api_key ──────────────────────────────────────────
+  server.tool(
+    'oms_create_api_key',
+    'Mint a new API key. The response includes a plaintext `key` field ' +
+      'with the `oms_live_*` (or `oms_test_*` for sandbox) secret — ' +
+      'surface it to the user EXACTLY ONCE so they can persist it. ' +
+      'Subsequent reads never expose it; a lost key must be rotated, ' +
+      'not recovered.',
+    {
+      name: z.string().min(1).max(128).optional(),
+      mode: z.enum(['live', 'test']).optional(),
+    },
+    async (args) => {
+      const r = await omsFetch('POST', '/v1/api-keys', args);
+      return asResult(r);
+    },
+  );
+
+  // ── oms_revoke_api_key ──────────────────────────────────────────
+  server.tool(
+    'oms_revoke_api_key',
+    'Immediately revoke an API key by id. Subsequent send-attempts ' +
+      'with that key return 401. Use oms_list_api_keys first to find ' +
+      'the id.',
+    { id: z.string().uuid() },
+    async (args) => {
+      const r = await omsFetch('DELETE', `/v1/api-keys/${encodeURIComponent(args.id)}`);
+      return asResult(r);
+    },
+  );
+
+  // ── oms_rotate_api_key ──────────────────────────────────────────
+  server.tool(
+    'oms_rotate_api_key',
+    'Atomic rotation: mint a fresh API key with the same name + revoke ' +
+      'the existing one in a single TXN. Returns the new plaintext key — ' +
+      'surface to the user once; the old key stops working immediately.',
+    { id: z.string().uuid() },
+    async (args) => {
+      const r = await omsFetch('POST', `/v1/api-keys/${encodeURIComponent(args.id)}/rotate`, {});
+      return asResult(r);
+    },
+  );
+
   // ── oms_cloudflare_detect ───────────────────────────────────────
   server.tool(
     'oms_cloudflare_detect',
