@@ -290,7 +290,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
     'Manually add an address to the customer\'s suppression list. ' +
       'Default reason is `manual`; use `hard-bounce` or `complaint` only ' +
       'with explicit user direction (those reasons are normally set by the ' +
-      'SES-event handler on actual bounces/complaints).',
+      'delivery-event handler on actual bounces/complaints).',
     {
       email: z.string().email(),
       reason: z.enum(['manual', 'hard-bounce', 'complaint']).optional(),
@@ -320,7 +320,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   // ── oms_list_api_keys ───────────────────────────────────────────
   server.tool(
     'oms_list_api_keys',
-    'List the customer\'s API keys (OMS-31). Returns id + name + ' +
+    'List the customer\'s API keys. Returns id + name + ' +
       'display-prefix + lastUsedAt + revokedAt per row. NEVER includes ' +
       'plaintext — those are visible only at create / rotate time, once.',
     {},
@@ -495,6 +495,10 @@ export function createServer(opts: CreateServerOptions): McpServer {
             'bounce.transient',
             'complaint',
             'delivery',
+            'inbound.received',
+            'senderDomain.dkim.migrated',
+            'senderDomain.dkim.rotation_pending',
+            'senderDomain.dkim.rotation_complete',
           ]),
         )
         .optional()

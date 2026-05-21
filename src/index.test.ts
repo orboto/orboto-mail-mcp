@@ -1,5 +1,5 @@
 /**
- * Tests for the @orboto/mail-mcp tool surface (OMS-11).
+ * Tests for the @orboto/mail-mcp tool surface.
  *
  * We don't boot a full MCP transport — instead we exercise the tool
  * callbacks directly via the server's internal registry. That keeps
@@ -60,7 +60,7 @@ async function invokeTool(server: ReturnType<typeof createServer>, name: string,
   return await callback(args, { signal: new AbortController().signal });
 }
 
-describe('createServer registers the 7 OMS tools', () => {
+describe('createServer registers the seven tools', () => {
   it('throws when apiKey is missing', () => {
     expect(() => createServer({ apiKey: '' })).toThrowError(/apiKey is required/);
   });
