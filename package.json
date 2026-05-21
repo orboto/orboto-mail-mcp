@@ -46,8 +46,13 @@
     "eu-hosted",
     "gdpr"
   ],
-  "homepage": "https://mail.orboto.io",
+  "homepage": "https://github.com/orboto/orboto-mail-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orboto/orboto-mail-mcp.git"
+  },
   "bugs": {
+    "url": "https://github.com/orboto/orboto-mail-mcp/issues",
     "email": "support@orboto.io"
   },
   "publishConfig": {
