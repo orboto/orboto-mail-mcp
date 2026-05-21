@@ -1,0 +1,61 @@
+{
+  "name": "@orboto/mail-mcp",
+  "version": "0.5.0",
+  "description": "MCP server for the Orboto Mail Service — exposes send / batch / templates / suppression / inbound / webhooks / quota as MCP tools for Claude, Cursor, and other agent-aware clients. Boot via `npx @orboto/mail-mcp` with OMS_API_KEY in env.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "orboto-mail-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "build": "tsc && rm -f dist/.tsbuildinfo",
+    "dev": "tsx src/cli.ts",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@orboto/mail": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "orboto",
+    "mcp",
+    "model-context-protocol",
+    "email",
+    "transactional-email",
+    "claude",
+    "agents",
+    "ai",
+    "eu-hosted",
+    "gdpr"
+  ],
+  "homepage": "https://github.com/orboto/orboto-mail-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orboto/orboto-mail-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/orboto/orboto-mail-mcp/issues",
+    "email": "support@orboto.io"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
