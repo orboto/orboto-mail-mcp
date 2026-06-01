@@ -396,13 +396,14 @@ export function createServer(opts: CreateServerOptions): McpServer {
   // ── oms_cloudflare_auto_setup ───────────────────────────────────
   server.tool(
     'oms_cloudflare_auto_setup',
-    'Auto-create the DKIM/SPF/DMARC DNS records on Cloudflare using a ' +
-      'customer-supplied API token. The customer must have generated a ' +
-      'Cloudflare API token with Zone:DNS:Edit permission on their zone ' +
-      'and pasted it here. The token is single-use by default (validated, ' +
-      'used to create records, then discarded). Pass store_for_rotation=true ' +
-      'only when the customer explicitly wants OMS to retain the token for ' +
-      'future DKIM-key rotations — it gets AES-256-GCM-encrypted at rest. ' +
+    'Auto-create the DKIM + SPF + DMARC + MAIL FROM (Return-Path) DNS ' +
+      'records on Cloudflare using a customer-supplied API token. The ' +
+      'customer must have generated a Cloudflare API token with ' +
+      'Zone:DNS:Edit permission on their zone and pasted it here. The token ' +
+      'is single-use by default (validated, used to create records, then ' +
+      'discarded). Pass store_for_rotation=true only when the customer ' +
+      'explicitly wants the records to retain the token for future DKIM-key ' +
+      'rotations - it gets AES-256-GCM-encrypted at rest. ' +
       'Returns { ok, zoneId, recordsCreated, tokenStored }.',
     {
       domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
