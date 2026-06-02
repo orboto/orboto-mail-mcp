@@ -1,5 +1,5 @@
 /**
- * @orboto/mail-mcp — MCP server for the Orboto Mail Service.
+ * @orboto/mail-mcp - MCP server for the Orboto Mail Service.
  *
  * Exposes seven tools to AI agents (Claude Code, Cursor, MCP-aware
  * bots). The agent calls a tool; this server proxies it to the OMS
@@ -23,11 +23,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 export interface CreateServerOptions {
-  /** OMS API base URL — default `https://mail.orboto.io/api`. */
+  /** OMS API base URL - default `https://mail.orboto.io/api`. */
   baseUrl?: string;
   /** Bearer-token (`oms_live_…` or `oms_test_…`). Required. */
   apiKey: string;
-  /** Test injection — substitute global fetch for unit tests. */
+  /** Test injection - substitute global fetch for unit tests. */
   fetchImpl?: typeof fetch;
 }
 
@@ -83,7 +83,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
 
   /**
    * Format an OMS response as an MCP `CallToolResult`. Errors are
-   * marked with `isError: true` so the agent surfaces them — and the
+   * marked with `isError: true` so the agent surfaces them - and the
    * raw body (including `remainingQuota` on 402, `reason` codes, etc.)
    * is rendered as JSON in the text content for the agent to parse.
    */
@@ -110,7 +110,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
     'Send a transactional email through OMS. Use this for one-off mails ' +
       'where the agent supplies the full subject + body. For templated ' +
       'sends, use `oms_send_template` instead. Returns the messageId, ' +
-      'queued status, overage flag, and remainingQuota — read remainingQuota ' +
+      'queued status, overage flag, and remainingQuota - read remainingQuota ' +
       'to decide whether the next send needs user confirmation.',
     {
       from: z.string().email().describe('Sender address (must be on an authorized domain).'),
@@ -144,7 +144,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
     'oms_send_batch',
     'Send up to 100 transactional emails in one call. Use ' +
       'this when you need to fan out a flow (e.g. welcome-mail to a ' +
-      'list of 50 freshly imported users) — avoids N×rate-limit hits + ' +
+      'list of 50 freshly imported users) - avoids N×rate-limit hits + ' +
       'returns one consolidated quota snapshot. Each message is ' +
       'validated + delivered independently; partial failures surface in ' +
       'the `results` array with per-item `ok` flag. The first quota-' +
@@ -273,7 +273,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_check_suppression',
     'Check whether a recipient is on the customer\'s suppression list. ' +
-      'Always check before sending to a freshly-typed-by-the-user address — ' +
+      'Always check before sending to a freshly-typed-by-the-user address - ' +
       'OMS would 422 the send otherwise + you save the round-trip.',
     {
       email: z.string().email(),
@@ -322,7 +322,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
     'oms_list_api_keys',
     'List the customer\'s API keys. Returns id + name + ' +
       'display-prefix + lastUsedAt + revokedAt per row. NEVER includes ' +
-      'plaintext — those are visible only at create / rotate time, once.',
+      'plaintext - those are visible only at create / rotate time, once.',
     {},
     async () => {
       const r = await omsFetch('GET', '/v1/api-keys');
@@ -334,7 +334,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_create_api_key',
     'Mint a new API key. The response includes a plaintext `key` field ' +
-      'with the `oms_live_*` (or `oms_test_*` for sandbox) secret — ' +
+      'with the `oms_live_*` (or `oms_test_*` for sandbox) secret - ' +
       'surface it to the user EXACTLY ONCE so they can persist it. ' +
       'Subsequent reads never expose it; a lost key must be rotated, ' +
       'not recovered.',
@@ -365,7 +365,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_rotate_api_key',
     'Atomic rotation: mint a fresh API key with the same name + revoke ' +
-      'the existing one in a single TXN. Returns the new plaintext key — ' +
+      'the existing one in a single TXN. Returns the new plaintext key - ' +
       'surface to the user once; the old key stops working immediately.',
     { id: z.string().uuid() },
     async (args) => {
@@ -379,7 +379,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
     'oms_cloudflare_detect',
     'Check whether a sender-domain is hosted on Cloudflare DNS. ' +
       'Returns { onCloudflare, nameservers, resolvedFor }. Use this ' +
-      'before suggesting oms_cloudflare_auto_setup — only call the ' +
+      'before suggesting oms_cloudflare_auto_setup - only call the ' +
       'auto-setup tool when onCloudflare=true.',
     {
       domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
@@ -396,13 +396,14 @@ export function createServer(opts: CreateServerOptions): McpServer {
   // ── oms_cloudflare_auto_setup ───────────────────────────────────
   server.tool(
     'oms_cloudflare_auto_setup',
-    'Auto-create the DKIM/SPF/DMARC DNS records on Cloudflare using a ' +
-      'customer-supplied API token. The customer must have generated a ' +
-      'Cloudflare API token with Zone:DNS:Edit permission on their zone ' +
-      'and pasted it here. The token is single-use by default (validated, ' +
-      'used to create records, then discarded). Pass store_for_rotation=true ' +
-      'only when the customer explicitly wants OMS to retain the token for ' +
-      'future DKIM-key rotations — it gets AES-256-GCM-encrypted at rest. ' +
+    'Auto-create the DKIM + SPF + DMARC + MAIL FROM (Return-Path) DNS ' +
+      'records on Cloudflare using a customer-supplied API token. The ' +
+      'customer must have generated a Cloudflare API token with ' +
+      'Zone:DNS:Edit permission on their zone and pasted it here. The token ' +
+      'is single-use by default (validated, used to create records, then ' +
+      'discarded). Pass store_for_rotation=true only when the customer ' +
+      'explicitly wants the records to retain the token for future DKIM-key ' +
+      'rotations - it gets AES-256-GCM-encrypted at rest. ' +
       'Returns { ok, zoneId, recordsCreated, tokenStored }.',
     {
       domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
@@ -429,12 +430,39 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_update_sender_domain ────────────────────────────────────
+  server.tool(
+    'oms_update_sender_domain',
+    'Update mutable per-domain settings on a customer sender-domain. ' +
+      'Currently the only toggle is `open_tracking_enabled` - flipping ' +
+      'it on injects a 1x1 tracking pixel before </body> in every HTML ' +
+      'send from this domain so OMS can record opened_at. GDPR-relevant: ' +
+      'agents should only flip this on with explicit customer consent, ' +
+      'and the customer must disclose to recipients in their privacy ' +
+      'policy. Returns the updated sender-domain row.',
+    {
+      domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
+      open_tracking_enabled: z
+        .boolean()
+        .optional()
+        .describe('Default off. True to inject the 1x1 open-tracking pixel into HTML sends.'),
+    },
+    async (args) => {
+      const r = await omsFetch(
+        'PATCH',
+        `/v1/sender-domains/${encodeURIComponent(args.domain_id)}`,
+        { open_tracking_enabled: args.open_tracking_enabled },
+      );
+      return asResult(r);
+    },
+  );
+
   // ── oms_list_inbound ────────────────────────────────────────────
   server.tool(
     'oms_list_inbound',
     'List inbound mails received by this customer. Most-recent ' +
       'first, cursor-paginated. Each row carries id, messageId, from, to, ' +
-      'subject + receivedAt. Body is NOT returned here — call oms_get_inbound ' +
+      'subject + receivedAt. Body is NOT returned here - call oms_get_inbound ' +
       'with the id to obtain a 15-min presigned-URL for the raw MIME body.',
     {
       limit: z.number().int().min(1).max(100).optional(),
@@ -479,7 +507,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
   server.tool(
     'oms_create_webhook',
     'Create a new outbound webhook subscription. The response includes ' +
-      'a plaintext signing secret — surface it to the user EXACTLY ONCE ' +
+      'a plaintext signing secret - surface it to the user EXACTLY ONCE ' +
       'so they can persist it. Subsequent GETs strip the secret.',
     {
       url: z.string().url().describe('Target https:// URL (or http://localhost in dev).'),
@@ -495,6 +523,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
             'bounce.transient',
             'complaint',
             'delivery',
+            'email.opened',
             'inbound.received',
             'senderDomain.dkim.migrated',
             'senderDomain.dkim.rotation_pending',
