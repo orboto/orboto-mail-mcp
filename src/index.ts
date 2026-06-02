@@ -430,6 +430,33 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_update_sender_domain ────────────────────────────────────
+  server.tool(
+    'oms_update_sender_domain',
+    'Update mutable per-domain settings on a customer sender-domain. ' +
+      'Currently the only toggle is `open_tracking_enabled` - flipping ' +
+      'it on injects a 1x1 tracking pixel before </body> in every HTML ' +
+      'send from this domain so OMS can record opened_at. GDPR-relevant: ' +
+      'agents should only flip this on with explicit customer consent, ' +
+      'and the customer must disclose to recipients in their privacy ' +
+      'policy. Returns the updated sender-domain row.',
+    {
+      domain_id: z.string().uuid().describe('The sender-domain id (UUID).'),
+      open_tracking_enabled: z
+        .boolean()
+        .optional()
+        .describe('Default off. True to inject the 1x1 open-tracking pixel into HTML sends.'),
+    },
+    async (args) => {
+      const r = await omsFetch(
+        'PATCH',
+        `/v1/sender-domains/${encodeURIComponent(args.domain_id)}`,
+        { open_tracking_enabled: args.open_tracking_enabled },
+      );
+      return asResult(r);
+    },
+  );
+
   // ── oms_list_inbound ────────────────────────────────────────────
   server.tool(
     'oms_list_inbound',
