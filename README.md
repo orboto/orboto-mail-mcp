@@ -5,7 +5,7 @@ MCP server for the Orboto Mail Service. Exposes the OMS API surface as MCP tools
 ## Install + run
 
 ```bash
-# Per-call (recommended — always picks up the latest version)
+# Per-call (recommended - always picks up the latest version)
 npx @orboto/mail-mcp
 
 # Or installed globally
@@ -40,7 +40,7 @@ npx @orboto/mail-mcp
 
 | Tool                       | Purpose                                                    |
 |----------------------------|------------------------------------------------------------|
-| `oms_send_email`           | Send one transactional email                               |
+| `oms_send_email`           | Send one transactional email (supports `cc`, `bcc` arrays of max 50 each, plus `attachments` array of max 20 / 30 MB total) |
 | `oms_send_batch`           | Send up to 100 messages in one call (per-item outcomes)    |
 | `oms_send_template`        | Render + send a server-side template                       |
 | `oms_get_quota`            | Read current quota state (monthly + optional daily cap)    |
@@ -58,4 +58,4 @@ Every tool response includes a `remainingQuota` snapshot so agents can decide wh
 
 ## License
 
-[MIT](./LICENSE.md) — use it however you want.
+[MIT](./LICENSE.md) - use it however you want.
