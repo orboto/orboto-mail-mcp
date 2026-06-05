@@ -1,6 +1,6 @@
 {
   "name": "@orboto/mail-mcp",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "MCP server for the Orboto Mail Service — exposes send / batch / templates / suppression / inbound / webhooks / quota as MCP tools for Claude, Cursor, and other agent-aware clients. Boot via `npx @orboto/mail-mcp` with OMS_API_KEY in env.",
   "license": "MIT",
   "type": "module",
