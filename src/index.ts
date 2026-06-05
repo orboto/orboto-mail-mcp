@@ -115,6 +115,16 @@ export function createServer(opts: CreateServerOptions): McpServer {
     {
       from: z.string().email().describe('Sender address (must be on an authorized domain).'),
       to: z.string().email().describe('Recipient address.'),
+      cc: z
+        .array(z.string().email())
+        .max(50)
+        .optional()
+        .describe('Optional CC recipients (visible to all). Max 50.'),
+      bcc: z
+        .array(z.string().email())
+        .max(50)
+        .optional()
+        .describe('Optional silent BCC recipients (envelope-only delivery, no Bcc header). Max 50.'),
       subject: z.string().min(1).describe('Subject line.'),
       body_html: z
         .string()
@@ -151,6 +161,8 @@ export function createServer(opts: CreateServerOptions): McpServer {
       const r = await omsFetch('POST', '/v1/send', {
         from: args.from,
         to: args.to,
+        cc: args.cc,
+        bcc: args.bcc,
         subject: args.subject,
         html: args.body_html,
         text: args.body_text,
