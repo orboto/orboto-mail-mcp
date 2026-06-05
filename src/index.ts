@@ -125,6 +125,27 @@ export function createServer(opts: CreateServerOptions): McpServer {
         .record(z.string())
         .optional()
         .describe('Tag bag, e.g. { workflow: "invite", segment: "beta" }.'),
+      attachments: z
+        .array(
+          z.object({
+            filename: z.string().min(1).max(256),
+            content: z
+              .string()
+              .describe('base64-encoded file bytes. Decode this from your file before passing.'),
+            contentType: z.string().min(1).max(127),
+            contentId: z
+              .string()
+              .min(1)
+              .max(128)
+              .optional()
+              .describe('Optional Content-ID for inline references like <img src="cid:...">.'),
+          }),
+        )
+        .max(20)
+        .optional()
+        .describe(
+          'Optional file attachments. Max 20 entries; total decoded size across all attachments must stay under 30 MB.',
+        ),
     },
     async (args) => {
       const r = await omsFetch('POST', '/v1/send', {
@@ -134,6 +155,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
         html: args.body_html,
         text: args.body_text,
         tags: args.tags,
+        attachments: args.attachments,
       });
       return asResult(r);
     },
