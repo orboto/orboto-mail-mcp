@@ -56,6 +56,15 @@ npx @orboto/mail-mcp
 
 Every tool response includes a `remainingQuota` snapshot so agents can decide whether to keep sending or pause for the user.
 
+### Overage billing (wallet)
+
+Once the monthly included quota is used up, above-quota sends draw on the account wallet (`overage: true` on success). Two billing outcomes to surface to the user:
+
+- **402 `payment_required`** - wallet balance too low; the send was blocked. Suggest a top-up at `account.orboto.io/mail/billing`.
+- **503 `wallet_unavailable`** - transient billing outage; the send was **not** dispatched (fail-closed). Retry shortly.
+
+In `oms_send_batch`, an empty wallet marks the first over-quota item `payment_required` and skips the rest.
+
 ## License
 
 [MIT](./LICENSE.md) - use it however you want.
