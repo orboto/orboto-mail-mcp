@@ -111,7 +111,13 @@ export function createServer(opts: CreateServerOptions): McpServer {
       'where the agent supplies the full subject + body. For templated ' +
       'sends, use `oms_send_template` instead. Returns the messageId, ' +
       'queued status, overage flag, and remainingQuota - read remainingQuota ' +
-      'to decide whether the next send needs user confirmation.',
+      'to decide whether the next send needs user confirmation. Once the ' +
+      "monthly included quota is used up, above-quota sends draw on the " +
+      'account wallet (overage=true on success). Two billing outcomes to ' +
+      'surface to the user: 402 reason "payment_required" = wallet balance ' +
+      'too low, send blocked, suggest a top-up; 503 reason ' +
+      '"wallet_unavailable" = transient billing outage, send not dispatched, ' +
+      'retry shortly.',
     {
       from: z.string().email().describe('Sender address (must be on an authorized domain).'),
       to: z.string().email().describe('Recipient address.'),
@@ -183,6 +189,9 @@ export function createServer(opts: CreateServerOptions): McpServer {
       'validated + delivered independently; partial failures surface in ' +
       'the `results` array with per-item `ok` flag. The first quota-' +
       'exhaust stops subsequent items (marked `quotaSkipped=true`). ' +
+      'Over-quota items draw on the account wallet; if the wallet is ' +
+      'empty the first such item gets error "payment_required" and the ' +
+      'rest are skipped, and a billing outage gives "wallet_unavailable". ' +
       'Always returns 200; inspect `summary` + `results` to decide retry.',
     {
       messages: z
