@@ -131,6 +131,11 @@ export function createServer(opts: CreateServerOptions): McpServer {
         .max(50)
         .optional()
         .describe('Optional silent BCC recipients (envelope-only delivery, no Bcc header). Max 50.'),
+      reply_to: z
+        .string()
+        .max(320)
+        .optional()
+        .describe('Optional Reply-To mailbox (RFC-5322, "Name <addr>" allowed, any domain). Replies go there instead of `from`.'),
       subject: z.string().min(1).describe('Subject line.'),
       body_html: z
         .string()
@@ -169,6 +174,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
         to: args.to,
         cc: args.cc,
         bcc: args.bcc,
+        replyTo: args.reply_to,
         subject: args.subject,
         html: args.body_html,
         text: args.body_text,

@@ -40,7 +40,7 @@ npx @orboto/mail-mcp
 
 | Tool                       | Purpose                                                    |
 |----------------------------|------------------------------------------------------------|
-| `oms_send_email`           | Send one transactional email (supports `cc`, `bcc` arrays of max 50 each, plus `attachments` array of max 20 / 30 MB total) |
+| `oms_send_email`           | Send one transactional email (supports `cc`, `bcc` arrays of max 50 each, an optional `reply_to` mailbox, plus `attachments` array of max 20 / 30 MB total) |
 | `oms_send_batch`           | Send up to 100 messages in one call (per-item outcomes)    |
 | `oms_send_template`        | Render + send a server-side template                       |
 | `oms_get_quota`            | Read current quota state (monthly + optional daily cap)    |
