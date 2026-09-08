@@ -364,6 +364,38 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_dmarc_set_alerts ────────────────────────────────────────
+  server.tool(
+    'oms_dmarc_set_alerts',
+    'Enable, update or disable the daily DMARC anomaly check for one of ' +
+      'the customer\'s sender domains (off by default). When enabled, a ' +
+      '`dmarc.anomaly` webhook event fires - plus a plain-text mail to ' +
+      '`notify_email` when set - for: pass rate dropping >10 pp week over ' +
+      'week, a new IP sending >100 messages in a day, or rejects jumping ' +
+      'to >5x the 30-day median. `enabled: false` pauses without losing ' +
+      'the address; `remove: true` deletes the opt-in. Returns the current ' +
+      'subscription state.',
+    {
+      domain: z.string().min(1).max(255).describe('One of the account\'s sender domains.'),
+      enabled: z.boolean().optional().describe('Default true.'),
+      notify_email: z
+        .string()
+        .max(320)
+        .nullable()
+        .optional()
+        .describe('Mailbox for alert mails. Omit to keep, null to clear (webhook event only).'),
+      remove: z.boolean().optional().describe('true = delete the opt-in (DELETE).'),
+    },
+    async (args) => {
+      const path = `/v1/dmarc/domains/${encodeURIComponent(args.domain)}/alerts`;
+      if (args.remove) return asResult(await omsFetch('DELETE', path));
+      const body: Record<string, unknown> = {};
+      if (args.enabled !== undefined) body.enabled = args.enabled;
+      if (args.notify_email !== undefined) body.notifyEmail = args.notify_email;
+      return asResult(await omsFetch('POST', path, body));
+    },
+  );
+
   // ── oms_check_suppression ───────────────────────────────────────
   server.tool(
     'oms_check_suppression',
@@ -623,6 +655,7 @@ export function createServer(opts: CreateServerOptions): McpServer {
             'senderDomain.dkim.migrated',
             'senderDomain.dkim.rotation_pending',
             'senderDomain.dkim.rotation_complete',
+            'dmarc.anomaly',
           ]),
         )
         .optional()
