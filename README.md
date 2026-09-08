@@ -45,6 +45,8 @@ npx @orboto/mail-mcp
 | `oms_send_template`        | Render + send a server-side template                       |
 | `oms_get_quota`            | Read current quota state (monthly + optional daily cap)    |
 | `oms_list_recent_sends`    | Cursor-paginated send history with status filters          |
+| `oms_dmarc_summary`        | DMARC auth-pass rate, dispositions, top orgs + IPs per sender domain (7d/30d/90d) |
+| `oms_dmarc_source_ips`     | Per-source-IP DMARC alignment breakdown - spoofing + misconfigured-relay signal |
 | `oms_check_suppression`    | Check whether an address is on the suppression list        |
 | `oms_add_to_suppression`   | Manually add an address to the suppression list            |
 | `oms_list_templates`       | Enumerate templates with their variables schema            |

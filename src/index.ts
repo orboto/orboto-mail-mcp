@@ -318,6 +318,52 @@ export function createServer(opts: CreateServerOptions): McpServer {
     },
   );
 
+  // ── oms_dmarc_summary ───────────────────────────────────────────
+  server.tool(
+    'oms_dmarc_summary',
+    'DMARC aggregate-report summary for one of the customer\'s sender ' +
+      'domains over a period: auth-pass rate (DKIM or SPF aligned), ' +
+      'dispositions (none/quarantine/reject), top reporting orgs and top ' +
+      'source IPs. `summary` is null until the first report arrives - ' +
+      'receivers batch reports daily, so a new domain shows nothing for ' +
+      '24-48h; that is not an error. A domain the account does not own ' +
+      'answers 404 domain_not_found.',
+    {
+      domain: z.string().min(1).max(255).describe('One of the account\'s sender domains.'),
+      period: z.enum(['7d', '30d', '90d']).optional().describe('Reporting window, default 30d, max 90d.'),
+    },
+    async (args) => {
+      const query = args.period ? `?period=${args.period}` : '';
+      const r = await omsFetch('GET', `/v1/dmarc/domains/${encodeURIComponent(args.domain)}/summary${query}`);
+      return asResult(r);
+    },
+  );
+
+  // ── oms_dmarc_source_ips ────────────────────────────────────────
+  server.tool(
+    'oms_dmarc_source_ips',
+    'Per-source-IP DMARC breakdown for a sender domain: messages, ' +
+      'reports, DKIM/SPF alignment, dispositions and the header-from ' +
+      'domains each IP used. An IP with failing alignment and a foreign ' +
+      'header-from is the spoofing signal; a failing IP with your own ' +
+      'header-from is usually a relay that is missing from SPF/DKIM. ' +
+      'Cursor-paginated by volume, highest first.',
+    {
+      domain: z.string().min(1).max(255).describe('One of the account\'s sender domains.'),
+      period: z.enum(['7d', '30d', '90d']).optional().describe('Reporting window, default 30d, max 90d.'),
+      limit: z.number().int().min(1).max(100).optional().describe('Default 20, max 100.'),
+      cursor: z.string().optional().describe('Opaque cursor from a previous response\'s `nextCursor`.'),
+    },
+    async (args) => {
+      const params = new URLSearchParams();
+      if (args.period) params.set('period', args.period);
+      params.set('limit', String(args.limit ?? 20));
+      if (args.cursor) params.set('cursor', args.cursor);
+      const r = await omsFetch('GET', `/v1/dmarc/domains/${encodeURIComponent(args.domain)}/source-ips?${params.toString()}`);
+      return asResult(r);
+    },
+  );
+
   // ── oms_check_suppression ───────────────────────────────────────
   server.tool(
     'oms_check_suppression',
